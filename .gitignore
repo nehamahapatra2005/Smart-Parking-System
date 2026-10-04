@@ -1,0 +1,34 @@
+# Qt / qmake generated files
+Makefile
+.qmake.stash
+moc_*.cpp
+moc_*.o
+qrc_*.cpp
+ui_*.h
+
+# C++ object files
+*.o
+
+# Executables
+SmartParking
+parking
+parking.exe
+*.exe
+
+# Qt user/build files
+*.pro.user
+*.pro.user.*
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# Build directories
+build/
+debug/
+release/
+
+# Temporary files
+*.log
+*.tmp
+*.swp
