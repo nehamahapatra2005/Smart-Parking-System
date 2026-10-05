@@ -688,7 +688,7 @@ MainWindow::MainWindow(QWidget *parent)
     billingPageTitle->setObjectName("dashboardTitle");
 
     QLabel* billingPageSubtitle = new QLabel(
-        "Select a parked vehicle, calculate its fee, and complete checkout");
+        "Select a parked vehicle, view its fee, and complete checkout");
     billingPageSubtitle->setObjectName("dashboardSubtitle");
 
     billingTitleLayout->addWidget(billingPageTitle);
@@ -737,20 +737,10 @@ MainWindow::MainWindow(QWidget *parent)
     QHBoxLayout* billingActionLayout = new QHBoxLayout();
     billingActionLayout->setSpacing(10);
 
-    QPushButton* calculateBillButton =
-        new QPushButton("Calculate Fee");
-    calculateBillButton->setObjectName("secondaryButton");
-
     QPushButton* payBillButton = new QPushButton("PAY BILL");
     payBillButton->setObjectName("primaryButton");
 
-    QPushButton* refreshBillingButton =
-        new QPushButton("Refresh");
-    refreshBillingButton->setObjectName("secondaryButton");
-
-    billingActionLayout->addWidget(calculateBillButton);
     billingActionLayout->addWidget(payBillButton);
-    billingActionLayout->addWidget(refreshBillingButton);
     billingLayout->addLayout(billingActionLayout);
 
     billingPageLayout->addWidget(billingCard);
@@ -893,31 +883,6 @@ MainWindow::MainWindow(QWidget *parent)
     );
 
     connect(
-        calculateBillButton,
-        &QPushButton::clicked,
-        this,
-        [this,
-         parkedVehicleCombo,
-         billingHoursSpin,
-         calculatedFeeLabel]() {
-            if (parkedVehicleCombo->currentIndex() < 0) {
-                QMessageBox::information(
-                    this,
-                    "Billing",
-                    "There are no parked vehicles to bill.");
-                return;
-            }
-
-            const int hours = billingHoursSpin->value();
-            const double fee = Billing::calculateFee(hours);
-
-            calculatedFeeLabel->setText(
-                QString("Total: Rs. %1")
-                    .arg(fee, 0, 'f', 2));
-        }
-    );
-
-    connect(
         payBillButton,
         &QPushButton::clicked,
         this,
@@ -993,15 +958,6 @@ MainWindow::MainWindow(QWidget *parent)
                         .arg(vehicleNumber)
                         .arg(fee, 0, 'f', 2));
             }
-        }
-    );
-
-    connect(
-        refreshBillingButton,
-        &QPushButton::clicked,
-        this,
-        [refreshBillingPage]() {
-            refreshBillingPage();
         }
     );
 
@@ -1212,17 +1168,6 @@ MainWindow::MainWindow(QWidget *parent)
         refreshVehiclesPage
     );
 
-    connect(
-        calculateBillButton,
-        &QPushButton::clicked,
-        this,
-        [billingHoursSpin, calculatedFeeLabel]() {
-            const int hours = billingHoursSpin->value();
-            const double fee = Billing::calculateFee(hours);
-            calculatedFeeLabel->setText(
-                QString("Total: Rs. %1").arg(fee, 0, 'f', 2));
-        }
-    );
 
     connect(
         saveDataButton,
