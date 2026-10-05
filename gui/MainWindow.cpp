@@ -565,7 +565,7 @@ MainWindow::MainWindow(QWidget *parent)
     vehiclesSummaryLayout->addWidget(notParkedCard);
     vehiclesPageLayout->addLayout(vehiclesSummaryLayout);
 
-    QLabel* registeredHeading = new QLabel("Latest Vehicle");
+    QLabel* registeredHeading = new QLabel("All Vehicles");
     registeredHeading->setObjectName("sectionHeading");
     vehiclesPageLayout->addWidget(registeredHeading);
 
@@ -599,17 +599,17 @@ MainWindow::MainWindow(QWidget *parent)
             delete item;
         }
 
-        // Show only the most recently added vehicle.
-        // Older vehicles remain in the backend/data files, but they are
-        // intentionally not displayed on this page.
-        if (!vehicles.empty()) {
-            const auto& vehicle = vehicles.back();
-            const int slotNumber =
-                parkingLot->findVehicleSlot(vehicle.get());
-
-            if (slotNumber != -1) {
+        // Count all currently parked vehicles.
+        for (const auto& vehicle : vehicles) {
+            if (parkingLot->findVehicleSlot(vehicle.get()) != -1) {
                 ++parkedCount;
             }
+        }
+
+        // Show every registered vehicle.
+        for (const auto& vehicle : vehicles) {
+            const int slotNumber =
+                parkingLot->findVehicleSlot(vehicle.get());
 
             QFrame* vehicleCard = new QFrame();
             vehicleCard->setObjectName("slotCard");
@@ -666,9 +666,11 @@ MainWindow::MainWindow(QWidget *parent)
         }
 
         vehiclesListLayout->addStretch();
+
         registeredNumber->setText(QString::number(totalVehicles));
         parkedVehiclesNumber->setText(QString::number(parkedCount));
-        notParkedNumber->setText(QString::number(totalVehicles - parkedCount));
+        notParkedNumber->setText(
+            QString::number(totalVehicles - parkedCount));
     };
 
     // ========================================================
@@ -757,6 +759,7 @@ MainWindow::MainWindow(QWidget *parent)
     pageStack->addWidget(billingPage);
 
     // Refreshes the list of vehicles that are currently parked.
+    // The previously selected vehicle is preserved when the list is rebuilt.
     auto refreshBillingPage = [
         this,
         parkedVehicleCombo,
@@ -765,6 +768,10 @@ MainWindow::MainWindow(QWidget *parent)
         calculatedFeeLabel,
         payBillButton
     ]() {
+        // Remember the selected vehicle before clearing the combo box.
+        const QVariant previousSelection =
+            parkedVehicleCombo->currentData();
+
         QSignalBlocker comboBlocker(parkedVehicleCombo);
         parkedVehicleCombo->clear();
 
@@ -772,6 +779,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         for (std::size_t i = 0; i < vehicles.size(); ++i) {
             Vehicle* vehicle = vehicles[i].get();
+
             const int slotNumber =
                 parkingLot->findVehicleSlot(vehicle);
 
@@ -793,42 +801,79 @@ MainWindow::MainWindow(QWidget *parent)
         if (parkedCount == 0) {
             selectedVehicleLabel->setText(
                 "No vehicles are currently parked.");
-            calculatedFeeLabel->setText("Total: Rs. 0.00");
+
+            calculatedFeeLabel->setText(
+                "Total: Rs. 0.00");
+
             payBillButton->setEnabled(false);
             billingHoursSpin->setEnabled(false);
+
             return;
         }
 
         payBillButton->setEnabled(true);
         billingHoursSpin->setEnabled(true);
 
+        // Try to restore the vehicle that was selected before refresh.
+        int restoredIndex = -1;
+
+        for (int i = 0;
+             i < parkedVehicleCombo->count();
+             ++i) {
+
+            if (parkedVehicleCombo->itemData(i)
+                    == previousSelection) {
+
+                restoredIndex = i;
+                break;
+            }
+        }
+
+        // If the previously selected vehicle was removed,
+        // select the first currently parked vehicle.
+        if (restoredIndex == -1) {
+            restoredIndex = 0;
+        }
+
+        parkedVehicleCombo->setCurrentIndex(restoredIndex);
+
         const int vehicleIndex =
             parkedVehicleCombo->currentData().toInt();
 
         if (vehicleIndex >= 0 &&
             vehicleIndex < static_cast<int>(vehicles.size())) {
-            Vehicle* vehicle = vehicles[vehicleIndex].get();
+
+            Vehicle* vehicle =
+                vehicles[vehicleIndex].get();
+
             const int slotNumber =
                 parkingLot->findVehicleSlot(vehicle);
 
             selectedVehicleLabel->setText(
-                QString("Vehicle: %1\nOwner: %2\nType: %3\nSlot: %4")
+                QString(
+                    "Vehicle: %1\n"
+                    "Owner: %2\n"
+                    "Type: %3\n"
+                    "Slot: %4"
+                )
                     .arg(QString::fromStdString(
                         vehicle->getVehicleNumber()))
                     .arg(QString::fromStdString(
                         vehicle->getOwnerName()))
                     .arg(QString::fromStdString(
                         vehicle->getVehicleType()))
-                    .arg(slotNumber));
+                    .arg(slotNumber)
+            );
 
             const double fee =
-                Billing::calculateFee(billingHoursSpin->value());
+                Billing::calculateFee(
+                    billingHoursSpin->value());
+
             calculatedFeeLabel->setText(
                 QString("Total: Rs. %1")
                     .arg(fee, 0, 'f', 2));
         }
     };
-
     connect(
         parkedVehicleCombo,
         &QComboBox::currentIndexChanged,
